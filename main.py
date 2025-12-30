@@ -71,13 +71,15 @@ def get_user_info():
     
     fields = [
         ('name', "Enter your full name: "),
-        ('grade_level', "Enter your grade level (e.g., high school senior, college freshman): "),
+        ('grade_level', "Enter your grade level (e.g., high school senior, college freshman, sophomore, junior, senior): "),
         ('gender', "Enter your gender (e.g., male, female, non-binary): "),
+        ('sex_assigned_at_birth', "Enter your sex assigned at birth (male, female, ignore): "),
         ('preferences', "Enter your sexual orientation/preferences (e.g., straight, gay, bi, queer): "),
         ('race', "Enter your race: "),
         ('ethnicity', "Enter your ethnicity: "),
         ('school', "Enter your school: "),
-        ('gpa', "Enter your GPA: "),
+        ('gpa_weighted', "Enter your weighted GPA (on a 4.0 scale): "),
+        ('gpa_unweighted', "Enter your unweighted GPA (on a 4.0 scale): "),
     ]
     
     for key, prompt in fields:
@@ -86,8 +88,11 @@ def get_user_info():
     
     # Transcript
     if 'transcript' not in info:
-        transcript_path = input("Enter path to transcript file (PDF or TXT): ")
-        info['transcript'] = extract_text_from_file(transcript_path)
+        transcript_path = input("Enter path to transcript file (PDF or TXT), or 'N/A' to skip: ")
+        if transcript_path.upper() == 'N/A':
+            info['transcript'] = "N/A"
+        else:
+            info['transcript'] = extract_text_from_file(transcript_path)
     
     # Essays: load from essay1.txt, essay2.txt, etc.
     essays = []
