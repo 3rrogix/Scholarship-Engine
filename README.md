@@ -33,7 +33,9 @@ For testing without submitting forms, use `python main.py --test`. This will sim
 ## How it works
 
 - The program prompts for user information including personal details, essays, and file paths.
-- Saves the user information to `user_info.json` for convenience in future runs.
+- Loads existing info from `user_info.txt` if available, and asks for any missing fields.
+- Saves user info (except essays and transcript) to `user_info.txt` for future runs.
+- Essays are loaded from `essay1.txt`, `essay2.txt`, etc., until no more files are found.
 - It searches the web for relevant scholarships based on grade level and demographics.
 - Filters out scholarships that are not applicable (e.g., college scholarships for high school students) using AI.
 - For each applicable scholarship URL, it uses Selenium to load the page, takes a screenshot, and uses Gemini AI to analyze the form fields.

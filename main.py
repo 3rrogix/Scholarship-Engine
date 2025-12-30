@@ -19,9 +19,24 @@ def save_completed_scholarships(completed):
     with open('completed_scholarships.json', 'w') as f:
         json.dump(list(completed), f)
 
+def load_user_info():
+    info = {}
+    try:
+        with open('user_info.txt', 'r') as f:
+            for line in f:
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    info[key.strip()] = value.strip()
+    except FileNotFoundError:
+        pass
+    return info
+
 def save_user_info(info):
-    with open('user_info.json', 'w') as f:
-        json.dump(info, f, indent=4)
+    with open('user_info.txt', 'w') as f:
+        for key, value in info.items():
+            if key in ['essays', 'transcript']:
+                continue  # Skip long text fields
+            f.write(f"{key}: {value}\n")
 
 def is_scholarship_applicable(url, user_info):
     """Use Gemini to check if the scholarship is applicable based on grade level."""
@@ -48,28 +63,46 @@ api_key = load_api_key()
 genai.configure(api_key=api_key)
 
 def get_user_info():
-    """Collect user information via prompts."""
-    info = {}
-    info['name'] = input("Enter your full name: ")
-    info['grade_level'] = input("Enter your grade level (e.g., high school senior, college freshman): ")
-    info['gender'] = input("Enter your gender (e.g., male, female, non-binary): ")
-    info['preferences'] = input("Enter your sexual orientation/preferences (e.g., straight, gay, bi, queer): ")
-    info['race'] = input("Enter your race: ")
-    info['ethnicity'] = input("Enter your ethnicity: ")
-    info['school'] = input("Enter your school: ")
-    info['gpa'] = input("Enter your GPA: ")
-    transcript_path = input("Enter path to transcript file (PDF or TXT): ")
-    info['transcript'] = extract_text_from_file(transcript_path)
+    """Collect user information via prompts, loading existing if available."""
+    info = load_user_info()
+    
+    fields = [
+        ('name', "Enter your full name: "),
+        ('grade_level', "Enter your grade level (e.g., high school senior, college freshman): "),
+        ('gender', "Enter your gender (e.g., male, female, non-binary): "),
+        ('preferences', "Enter your sexual orientation/preferences (e.g., straight, gay, bi, queer): "),
+        ('race', "Enter your race: "),
+        ('ethnicity', "Enter your ethnicity: "),
+        ('school', "Enter your school: "),
+        ('gpa', "Enter your GPA: "),
+    ]
+    
+    for key, prompt in fields:
+        if key not in info:
+            info[key] = input(prompt)
+    
+    # Transcript
+    if 'transcript' not in info:
+        transcript_path = input("Enter path to transcript file (PDF or TXT): ")
+        info['transcript'] = extract_text_from_file(transcript_path)
+    
+    # Essays: load from essay1.txt, essay2.txt, etc.
     essays = []
+    i = 1
     while True:
-        essay_path = input("Enter path to essay file (or 'done' to finish): ")
-        if essay_path.lower() == 'done':
+        filename = f'essay{i}.txt'
+        try:
+            with open(filename, 'r') as f:
+                essays.append(f.read())
+            i += 1
+        except FileNotFoundError:
             break
-        essays.append(extract_text_from_file(essay_path))
     info['essays'] = essays
+    
     # Extra details
-    info['country'] = input("Enter your country (optional): ") or None
-    # Add more as needed
+    if 'country' not in info:
+        info['country'] = input("Enter your country (optional): ") or None
+    
     return info
 
 def extract_text_from_file(file_path):
