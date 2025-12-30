@@ -361,8 +361,16 @@ def main():
             'unusual traffic', 'verify you are not a robot', 'solve the puzzle', 'protection from attacks'
         ]
         if any(word in page_text.lower() for word in capcha_keywords):
-            print("CAPTCHA or anti-bot detected! Please solve it in the browser. After solving, press Enter to continue...")
-            input("(Browser is paused for manual intervention)")
+            print("CAPTCHA or anti-bot detected on this scholarship site!")
+            user_choice = input("Solve the CAPTCHA and press Enter to continue, or type 's' to skip this site: ").strip().lower()
+            if user_choice == 's':
+                # Mark as not found and skip
+                with open('links.txt', 'a') as f:
+                    f.write(f"{link_url} | not found | Skipped due to CAPTCHA\n")
+                print(f"Skipped {link_url} and marked as not found.")
+                driver.back()
+                time.sleep(2)
+                continue
             # After user solves, try to reload text
             try:
                 page_text = driver.find_element(By.TAG_NAME, "body").text

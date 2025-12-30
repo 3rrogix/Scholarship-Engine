@@ -44,7 +44,7 @@ def analyze_page_with_gemini(image_path, prompt, client):
     }
     contents = [prompt, image_part]
     response = client.models.generate_content(
-        model='gemini-3-flash-preview',
+        model='gemini-2.5-flash',
         contents=contents
     )
     return response.text
@@ -52,6 +52,13 @@ def analyze_page_with_gemini(image_path, prompt, client):
 def fill_application(url, user_info, client):
     options = webdriver.ChromeOptions()
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+    # Step 1: Sign in to Google account
+    print("Opening Google sign-in page...")
+    driver.get("https://accounts.google.com/signin")
+    input("Please sign in to your Google account in the browser. After signing in, press Enter here to continue...")
+
+    # Step 2: Open scholarship link
     print(f"Opening {url} in browser...")
     driver.get(url)
     time.sleep(3)
@@ -101,7 +108,7 @@ def fill_application(url, user_info, client):
                 prompt_text = field.get('prompt', label)
                 essay_prompt = f"Write an essay responding to this prompt: {prompt_text}. Use the following information from the user: {user_info.get('essays', '')}"
                 essay_response = client.models.generate_content(
-                    model='gemini-1.5-flash',
+                    model='gemini-2.5-flash',
                     contents=essay_prompt
                 ).text
                 element.send_keys(essay_response)
