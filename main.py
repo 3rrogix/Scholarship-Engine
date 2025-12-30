@@ -327,7 +327,37 @@ def main():
         if first_link:
             print(f"Opening first search result: {first_link}")
             driver.get(first_link)
-            save_completed_scholarships({first_link})
+            # Wait for page to load
+            import time
+            time.sleep(3)
+            # Take screenshot for Gemini
+            screenshot_path = 'scholarship_page.png'
+            driver.save_screenshot(screenshot_path)
+            # Use Gemini to analyze the page for application button or status
+            prompt = (
+                "Analyze this scholarship webpage screenshot. "
+                "Is there a visible button or link to apply for the scholarship? "
+                "If so, what does it say? "
+                "Also, does the page indicate if the scholarship is closed, completed, or unavailable? "
+                "Summarize in JSON: {\"status\": 'open'|'closed'|'completed'|'not found', \"details\": <short reason>}"
+            )
+            analysis = analyze_page_with_gemini(screenshot_path, prompt)
+            print("Gemini Analysis:", analysis)
+            # Try to parse Gemini's JSON response
+            import json
+            status = 'not found'
+            details = ''
+            try:
+                result = json.loads(analysis)
+                status = result.get('status', 'not found')
+                details = result.get('details', '')
+            except Exception:
+                print("Could not parse Gemini response as JSON.")
+                details = analysis
+            # Save the link with status and details
+            with open('links.txt', 'a') as f:
+                f.write(f"{first_link} | {status} | {details}\n")
+            print(f"Saved link with status: {status}")
         else:
             print("No valid search result link found.")
     except Exception as e:
