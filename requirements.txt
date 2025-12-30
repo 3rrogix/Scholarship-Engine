@@ -1,0 +1,6 @@
+google-generativeai
+selenium
+webdriver-manager
+googlesearch-python
+requests
+pdfplumber  # for extracting text from PDFs like transcripts
