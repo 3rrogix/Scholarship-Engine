@@ -256,12 +256,7 @@ def main():
     
     # Check if all required fields are present
     required = ['name', 'grade_level', 'gender', 'race', 'school', 'gpa_weighted', 'resident']
-    if all(key in user_info and user_info[key] for key in required):
-        proceed = input("All info collected. Ready to start searching scholarships? (y/n): ").strip().lower()
-        if proceed != 'y':
-            print("Run the program again when ready.")
-            return
-    else:
+    if not all(key in user_info and user_info[key] for key in required):
         print("Some required info missing. Run again to complete setup.")
         return
     
