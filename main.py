@@ -45,8 +45,11 @@ def is_scholarship_applicable(url, user_info):
         response = requests.get(url, timeout=10)
         page_text = response.text[:5000]  # First 5000 chars
         prompt = f"Based on the following page text, is this scholarship applicable for a {user_info['grade_level']} student? Answer with 'yes' or 'no' only."
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content([prompt, page_text])
+        prompt_with_text = f"{prompt}\n\n{page_text}"
+        response = client.models.generate_content(
+            model='gemini-1.5-flash',
+            contents=prompt_with_text
+        )
         return 'yes' in response.text.lower()
     except:
         return True  # If can't check, assume applicable
@@ -60,7 +63,7 @@ def load_api_key():
 
 # Configure Gemini API
 api_key = load_api_key()
-genai.configure(api_key=api_key)
+client = genai.Client(api_key=api_key)
 
 def get_user_info():
     """Collect user information via prompts, loading existing if available."""
@@ -126,9 +129,19 @@ def search_scholarships(query, num_results=5):
 
 def analyze_page_with_gemini(image_path, prompt):
     """Use Gemini to analyze the screenshot."""
-    model = genai.GenerativeModel('gemini-1.5-flash')  # Use vision model
-    image = genai.upload_file(image_path)
-    response = model.generate_content([prompt, image])
+    with open(image_path, 'rb') as f:
+        image_data = f.read()
+    contents = [
+        prompt,
+        {
+            'mime_type': 'image/png',
+            'data': image_data
+        }
+    ]
+    response = client.models.generate_content(
+        model='gemini-1.5-flash',
+        contents=contents
+    )
     return response.text
 
 def fill_application(url, user_info, test=False):
@@ -199,7 +212,10 @@ def fill_application(url, user_info, test=False):
             elif 'essay' in label or 'personal statement' in label or 'textarea' in field_type:
                 prompt_text = field.get('prompt', label)
                 essay_prompt = f"Write an essay responding to this prompt: {prompt_text}. Use the following information from the user: {user_info['essays']}"
-                essay_response = genai.GenerativeModel('gemini-1.5-flash').generate_content(essay_prompt).text
+                essay_response = client.models.generate_content(
+                    model='gemini-1.5-flash',
+                    contents=essay_prompt
+                ).text
                 element.send_keys(essay_response)
             # Add more conditions
 
