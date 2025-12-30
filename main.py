@@ -157,8 +157,8 @@ def analyze_page_with_gemini(image_path, prompt):
 def fill_application(url, user_info, test=False):
     """Navigate to URL, analyze, and fill form."""
     options = webdriver.ChromeOptions()
-    # Always show the browser window so the user can see what's going on
-    # Remove headless mode entirely
+    # Never use headless mode, always show browser window
+    # (No options.add_argument("--headless"))
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     print(f"Opening {url} in browser...")
     driver.get(url)
