@@ -97,8 +97,9 @@ def get_user_info():
     
     if 'omit_criteria' not in info:
         info['omit_criteria'] = input("Any specific criteria to omit (e.g., keywords, leave blank if none): ").strip()
-    if 'transcript' not in info:
+    if 'transcript_path' not in info:
         transcript_path = input("Enter path to transcript file (PDF or TXT), leave blank to skip: ").strip()
+        info['transcript_path'] = transcript_path
         if not transcript_path:
             info['transcript'] = "N/A"
         else:
