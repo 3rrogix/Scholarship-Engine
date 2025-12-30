@@ -284,34 +284,26 @@ def main():
 
     num_results = int(input("How many links to search through on Google? ").strip())
 
-    scholarships = search_scholarships(query, num_results)
-    print(f"Found {len(scholarships)} scholarships from search.")
-    scholarships = [url for url in scholarships if is_scholarship_applicable(url, user_info)]
-    print(f"After filtering applicable: {len(scholarships)}")
-    completed = load_completed_scholarships()
-    print(f"Loaded {len(completed)} completed links.")
-    scholarships = [url for url in scholarships if url not in completed]  # Omit visited
-    print(f"After omitting visited: {len(scholarships)} scholarships to process.")
-    for url in scholarships:
-        print(f"Filling application for: {url}")
-        try:
-            fill_application(url, user_info, test=args.test)
-            if not args.test:
-                save_completed_scholarships({url})  # Append this one
-        except Exception as e:
-            print(f"Failed to fill {url}: {e}")
-            cont = input("Press enter to continue to next, 'r' to retry, 'q' to quit: ").strip().lower()
-            if cont == 'q':
-                break
-            elif cont == 'r':
-                # Retry
-                try:
-                    fill_application(url, user_info, test=args.test)
-                    if not args.test:
-                        save_completed_scholarships({url})
-                except Exception as e2:
-                    print(f"Retry failed: {e2}")
-                    input("Press enter to continue: ")
+
+    # Open Google search in browser for user to handle CAPTCHA if needed
+    import urllib.parse
+    search_terms = query
+    city = user_info.get('city', '')
+    state = user_info.get('state', '')
+    if city and state and city.lower() not in search_terms.lower() and state.lower() not in search_terms.lower():
+        search_terms += f" {city} {state}"
+    encoded_query = urllib.parse.quote_plus(search_terms)
+    url = f"https://www.google.com/search?q={encoded_query}"
+    from selenium import webdriver
+    from selenium.webdriver.chrome.service import Service
+    from webdriver_manager.chrome import ChromeDriverManager
+    options = webdriver.ChromeOptions()
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    driver.get(url)
+    input("If a CAPTCHA appears, please solve it in the browser. When you are done, press Enter here to continue...")
+    driver.quit()
+
+    # Continue with the rest of your workflow (search_scholarships, etc.) if needed
 
 if __name__ == "__main__":
     main()
