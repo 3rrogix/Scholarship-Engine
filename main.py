@@ -10,14 +10,15 @@ from googlesearch import search
 import pdfplumber
 def load_completed_scholarships():
     try:
-        with open('completed_scholarships.json', 'r') as f:
-            return set(json.load(f))
+        with open('links.txt', 'r') as f:
+            return set(line.strip() for line in f if line.strip())
     except FileNotFoundError:
         return set()
 
 def save_completed_scholarships(completed):
-    with open('completed_scholarships.json', 'w') as f:
-        json.dump(list(completed), f)
+    with open('links.txt', 'a') as f:  # Append
+        for url in completed:
+            f.write(url + '\n')
 
 def load_user_info():
     info = {}
@@ -81,22 +82,13 @@ def get_user_info():
         ('gpa_weighted', "Enter your weighted GPA (on a 4.0 scale): "),
         ('gpa_unweighted', "Enter your unweighted GPA (on a 4.0 scale): "),
         ('resident', "Are you a resident of your country? (yes/no): "),
-        ('local', "Do you want local scholarships? (yes/no): "),
     ]
     
     for key, prompt in fields:
         if key not in info:
             info[key] = input(prompt).strip()
     
-    # Conditional fields
-    if info.get('local', '').lower() == 'yes':
-        if 'city' not in info:
-            info['city'] = input("Enter your city: ").strip()
-        if 'state' not in info:
-            info['state'] = input("Enter your state: ").strip()
-    
-    if 'omit_criteria' not in info:
-        info['omit_criteria'] = input("Any specific criteria to omit (e.g., keywords, leave blank if none): ").strip()
+    # Conditional fields removed, asked every run
     if 'transcript_path' not in info:
         transcript_path = input("Enter path to transcript file (PDF or TXT), leave blank to skip: ").strip()
         info['transcript_path'] = transcript_path
@@ -261,20 +253,33 @@ def main():
         print("Some required info missing. Run again to complete setup.")
         return
     
-    query = f"scholarships for {user_info['grade_level']} {user_info['race']} {user_info['ethnicity']} students at {user_info['school']}"
-    scholarships = search_scholarships(query)
+    # Ask for search criteria every time
+    local = input("Do you want local scholarships? (yes/no): ").strip().lower()
+    if local == 'yes':
+        city = input("Enter your city: ").strip()
+        state = input("Enter your state: ").strip()
+        query_extra = f" in {city} {state}"
+    else:
+        query_extra = ""
+    
+    omit_criteria = input("Any specific criteria to omit (e.g., keywords, leave blank if none): ").strip()
+    
+    num_results = int(input("How many links to search through on Google? ").strip())
+    
+    query = f"scholarships for {user_info['grade_level']} {user_info['race']} {user_info['ethnicity']} students at {user_info['school']}{query_extra}"
+    if omit_criteria:
+        query += f" -{omit_criteria}"
+    
+    scholarships = search_scholarships(query, num_results)
     scholarships = [url for url in scholarships if is_scholarship_applicable(url, user_info)]
     completed = load_completed_scholarships()
+    scholarships = [url for url in scholarships if url not in completed]  # Omit visited
     for url in scholarships:
-        if url in completed:
-            print(f"Skipping already completed scholarship: {url}")
-            continue
         print(f"Filling application for: {url}")
         try:
             fill_application(url, user_info, test=args.test)
             if not args.test:
-                completed.add(url)
-                save_completed_scholarships(completed)
+                save_completed_scholarships({url})  # Append this one
         except Exception as e:
             print(f"Failed to fill {url}: {e}")
 
