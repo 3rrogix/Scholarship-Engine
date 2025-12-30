@@ -1,4 +1,4 @@
-google-generativeai
+google-genai
 selenium
 webdriver-manager
 googlesearch-python
