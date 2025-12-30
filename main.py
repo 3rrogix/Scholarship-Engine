@@ -336,8 +336,9 @@ def main():
             # Use Gemini to analyze the text for scholarship/apply info
             prompt = (
                 "Analyze the following webpage text. "
-                "Does it contain a scholarship opportunity, or is it just an ad for a university or unrelated? "
-                "If it is a scholarship, is there a way to apply (e.g., a button or link with 'apply', 'application', or similar)? "
+                "Does it contain a real scholarship opportunity, or is it just an ad for a university, or a scholarship only for attending that specific college/university? "
+                "If it is a scholarship only for students who attend the same college/university as the page, treat it as 'not found'. "
+                "If it is a real, general scholarship, is there a way to apply (e.g., a button or link with 'apply', 'application', or similar)? "
                 "If the scholarship is closed or unavailable, say so. "
                 "Summarize in JSON: {\"status\": 'open'|'closed'|'completed'|'not found', \"details\": <short reason>}"
             )
@@ -350,10 +351,19 @@ def main():
             print("Gemini Analysis:", analysis)
             # Try to parse Gemini's JSON response
             import json
+            import re
             status = 'not found'
             details = ''
+            # Remove code block markers if present
+            cleaned = analysis.strip()
+            if cleaned.startswith('```json'):
+                cleaned = re.sub(r'^```json', '', cleaned).strip()
+            if cleaned.startswith('```'):
+                cleaned = re.sub(r'^```', '', cleaned).strip()
+            if cleaned.endswith('```'):
+                cleaned = re.sub(r'```$', '', cleaned).strip()
             try:
-                result = json.loads(analysis)
+                result = json.loads(cleaned)
                 status = result.get('status', 'not found')
                 details = result.get('details', '')
             except Exception:
