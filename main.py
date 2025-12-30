@@ -307,17 +307,26 @@ def main():
     time.sleep(2)  # Wait for page to fully load
     first_link = None
     try:
-        # Google search results links have tag 'a' and data-ved attribute, but avoid ads and special boxes
-        results = driver.find_elements(By.CSS_SELECTOR, 'a')
-        for a in results:
-            href = a.get_attribute('href')
-            if href and '/url?' in href and 'google.com' not in href:
+        # Try to find organic search results using Google's result containers
+        # Organic results are usually in div.g or div[data-header-feature] with a descendant a[href]
+        organic_results = driver.find_elements(By.CSS_SELECTOR, 'div.g')
+        for result in organic_results:
+            link = result.find_element(By.CSS_SELECTOR, 'a')
+            href = link.get_attribute('href')
+            if href and href.startswith('http') and 'google.com' not in href:
                 first_link = href
                 break
+        if not first_link:
+            # Fallback: try all visible a[href] links
+            links = driver.find_elements(By.CSS_SELECTOR, 'a[href]')
+            for link in links:
+                href = link.get_attribute('href')
+                if href and href.startswith('http') and 'google.com' not in href:
+                    first_link = href
+                    break
         if first_link:
             print(f"Opening first search result: {first_link}")
             driver.get(first_link)
-            # Store the link so it isn't clicked again
             save_completed_scholarships({first_link})
         else:
             print("No valid search result link found.")
