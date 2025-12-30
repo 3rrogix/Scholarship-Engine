@@ -154,7 +154,10 @@ def analyze_page_with_gemini(image_path, prompt):
 
 def fill_application(url, user_info, test=False):
     """Navigate to URL, analyze, and fill form."""
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    options = webdriver.ChromeOptions()
+    if test:  # In test mode, keep headless for speed
+        options.add_argument("--headless")
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     driver.get(url)
     time.sleep(3)  # Wait for page load
 
@@ -187,6 +190,9 @@ def fill_application(url, user_info, test=False):
         data = json.loads(analysis)
     except:
         print("Failed to parse Gemini response as JSON.")
+        input("Press enter to continue or 'q' to quit: ")
+        driver.quit()
+        os.remove(screenshot_path)
         return
 
     # Fill fields
@@ -236,6 +242,7 @@ def fill_application(url, user_info, test=False):
                 driver.find_element(By.CSS_SELECTOR, button['selector']).click()
             break
 
+    input("Done filling, press enter to continue: ")
     driver.quit()
     os.remove(screenshot_path)
 
@@ -282,6 +289,18 @@ def main():
                 save_completed_scholarships({url})  # Append this one
         except Exception as e:
             print(f"Failed to fill {url}: {e}")
+            cont = input("Press enter to continue to next, 'r' to retry, 'q' to quit: ").strip().lower()
+            if cont == 'q':
+                break
+            elif cont == 'r':
+                # Retry
+                try:
+                    fill_application(url, user_info, test=args.test)
+                    if not args.test:
+                        save_completed_scholarships({url})
+                except Exception as e2:
+                    print(f"Retry failed: {e2}")
+                    input("Press enter to continue: ")
 
 if __name__ == "__main__":
     main()
