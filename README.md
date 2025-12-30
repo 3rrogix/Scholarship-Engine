@@ -24,7 +24,7 @@ Run `python main.py` and follow the prompts to input your information.
 
 For testing without submitting forms, use `python main.py --test`. This will simulate filling but not actually submit.
 
-The program opens a visible Chrome browser to show the filling process. After each scholarship, it waits for user input to continue. If errors occur, it prompts for actions like retry or quit.
+The program opens a visible Chrome browser to show the filling process (if GUI is available; otherwise, it runs headless and prints actions). After each scholarship, it waits for user input to continue. If errors occur, it prompts for actions like retry or quit.
 
 ## Setup
 

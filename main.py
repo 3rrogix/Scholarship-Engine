@@ -158,6 +158,7 @@ def fill_application(url, user_info, test=False):
     if test:  # In test mode, keep headless for speed
         options.add_argument("--headless")
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    print(f"Opening {url} in browser...")
     driver.get(url)
     time.sleep(3)  # Wait for page load
 
@@ -211,18 +212,24 @@ def fill_application(url, user_info, test=False):
             select = Select(element)
             if 'race' in label:
                 select.select_by_visible_text(user_info['race'])
+                print(f"Selected race: {user_info['race']}")
             elif 'ethnicity' in label:
                 select.select_by_visible_text(user_info['ethnicity'])
+                print(f"Selected ethnicity: {user_info['ethnicity']}")
             elif 'gender' in label:
                 select.select_by_visible_text(user_info['gender'])
+                print(f"Selected gender: {user_info['gender']}")
             # Add more
         elif field_type in ['text', 'textarea']:
             if 'name' in label:
                 element.send_keys(user_info['name'])
+                print(f"Filled name: {user_info['name']}")
             elif 'school' in label:
                 element.send_keys(user_info['school'])
+                print(f"Filled school: {user_info['school']}")
             elif 'gpa' in label:
-                element.send_keys(user_info['gpa'])
+                element.send_keys(user_info['gpa_weighted'])
+                print(f"Filled GPA: {user_info['gpa_weighted']}")
             elif 'essay' in label or 'personal statement' in label or 'textarea' in field_type:
                 prompt_text = field.get('prompt', label)
                 essay_prompt = f"Write an essay responding to this prompt: {prompt_text}. Use the following information from the user: {user_info['essays']}"
@@ -231,6 +238,7 @@ def fill_application(url, user_info, test=False):
                     contents=essay_prompt
                 ).text
                 element.send_keys(essay_response)
+                print(f"Filled essay with generated response.")
             # Add more conditions
 
     # Click submit or next
@@ -278,9 +286,13 @@ def main():
         query += f" -{omit_criteria}"
     
     scholarships = search_scholarships(query, num_results)
+    print(f"Found {len(scholarships)} scholarships from search.")
     scholarships = [url for url in scholarships if is_scholarship_applicable(url, user_info)]
+    print(f"After filtering applicable: {len(scholarships)}")
     completed = load_completed_scholarships()
+    print(f"Loaded {len(completed)} completed links.")
     scholarships = [url for url in scholarships if url not in completed]  # Omit visited
+    print(f"After omitting visited: {len(scholarships)} scholarships to process.")
     for url in scholarships:
         print(f"Filling application for: {url}")
         try:
