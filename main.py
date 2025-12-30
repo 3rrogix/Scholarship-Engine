@@ -48,7 +48,7 @@ def is_scholarship_applicable(url, user_info):
         prompt = f"Based on the following page text, is this scholarship applicable for a {user_info['grade_level']} student? Answer with 'yes' or 'no' only."
         prompt_with_text = f"{prompt}\n\n{page_text}"
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-3-flash-preview',
             contents=prompt_with_text
         )
         return 'yes' in response.text.lower()
@@ -150,7 +150,7 @@ def analyze_page_with_gemini(image_path, prompt):
     }
     contents = [prompt, image_part]
     response = client.models.generate_content(
-        model='gemini-1.5-flash',
+        model='gemini-3-flash-preview',
         contents=contents
     )
     return response.text
@@ -343,7 +343,7 @@ def main():
             )
             from google import genai
             response = client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-3-flash-preview',
                 contents=f"{prompt}\n\n{page_text[:5000]}"
             )
             analysis = response.text
