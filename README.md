@@ -27,7 +27,7 @@ For testing without submitting forms, use `python main.py --test`. This will sim
 
 1. Install dependencies: `pip install -r requirements.txt`
 2. Obtain a Gemini API key from [Google AI Studio](https://aistudio.google.com/).
-3. Set the API key as an environment variable: `export GEMINI_API_KEY=your_key_here`
+3. Create a file named `api_key.txt` in the project directory and paste your API key into it.
 4. Run the program: `python main.py`
 
 ## How it works

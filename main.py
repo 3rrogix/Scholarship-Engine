@@ -35,7 +35,17 @@ def is_scholarship_applicable(url, user_info):
         return 'yes' in response.text.lower()
     except:
         return True  # If can't check, assume applicable
-genai.configure(api_key=os.getenv('GEMINI_API_KEY'))  # Set your API key in environment
+
+def load_api_key():
+    try:
+        with open('api_key.txt', 'r') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        raise ValueError("API key file 'api_key.txt' not found. Please create it with your Gemini API key.")
+
+# Configure Gemini API
+api_key = load_api_key()
+genai.configure(api_key=api_key)
 
 def get_user_info():
     """Collect user information via prompts."""
