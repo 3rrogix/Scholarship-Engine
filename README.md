@@ -4,7 +4,7 @@ An AI-powered tool to automate filling out scholarship applications. It searches
 
 ## Features
 
-- Collects user details: grade level (including college sophomore, junior, senior), gender, sex assigned at birth, sexual orientation, race, ethnicity, school, weighted/unweighted GPA (4.0 scale), transcript (optional), essays, etc.
+- Collects user details: grade level (including college sophomore, junior, senior), gender, sex assigned at birth, sexual orientation, race, ethnicity, school, weighted/unweighted GPA (4.0 scale), residency, local preferences (city/state), omit criteria, transcript (optional), essays, etc.
 - Searches for scholarships online based on grade level and demographics.
 - Uses Gemini vision to scan and identify form fields and buttons.
 - Auto-fills applicable fields and generates essay responses where possible.

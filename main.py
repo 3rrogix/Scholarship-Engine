@@ -80,13 +80,23 @@ def get_user_info():
         ('school', "Enter your school: "),
         ('gpa_weighted', "Enter your weighted GPA (on a 4.0 scale): "),
         ('gpa_unweighted', "Enter your unweighted GPA (on a 4.0 scale): "),
+        ('resident', "Are you a resident of your country? (yes/no): "),
+        ('local', "Do you want local scholarships? (yes/no): "),
     ]
     
     for key, prompt in fields:
         if key not in info:
-            info[key] = input(prompt)
+            info[key] = input(prompt).strip()
     
-    # Transcript
+    # Conditional fields
+    if info.get('local', '').lower() == 'yes':
+        if 'city' not in info:
+            info['city'] = input("Enter your city: ").strip()
+        if 'state' not in info:
+            info['state'] = input("Enter your state: ").strip()
+    
+    if 'omit_criteria' not in info:
+        info['omit_criteria'] = input("Any specific criteria to omit (e.g., keywords, leave blank if none): ").strip()
     if 'transcript' not in info:
         transcript_path = input("Enter path to transcript file (PDF or TXT), or 'N/A' to skip: ")
         if transcript_path.upper() == 'N/A':
@@ -243,6 +253,18 @@ def main():
 
     user_info = get_user_info()
     save_user_info(user_info)
+    
+    # Check if all required fields are present
+    required = ['name', 'grade_level', 'gender', 'race', 'school', 'gpa_weighted', 'resident']
+    if all(key in user_info and user_info[key] for key in required):
+        proceed = input("All info collected. Ready to start searching scholarships? (y/n): ").strip().lower()
+        if proceed != 'y':
+            print("Run the program again when ready.")
+            return
+    else:
+        print("Some required info missing. Run again to complete setup.")
+        return
+    
     query = f"scholarships for {user_info['grade_level']} {user_info['race']} {user_info['ethnicity']} students at {user_info['school']}"
     scholarships = search_scholarships(query)
     scholarships = [url for url in scholarships if is_scholarship_applicable(url, user_info)]
