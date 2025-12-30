@@ -139,12 +139,16 @@ def search_scholarships(query, num_results=5):
 
 def analyze_page_with_gemini(image_path, prompt):
     """Use Gemini to analyze the screenshot."""
-    from google import genai
     with open(image_path, 'rb') as f:
         image_data = f.read()
-    # Use the Gemini SDK's Image object for image input
-    image = genai.Image(data=image_data, mime_type='image/png')
-    contents = [prompt, image]
+    # Use the correct Gemini SDK format for image input
+    image_part = {
+        'inline_data': {
+            'mime_type': 'image/png',
+            'data': image_data
+        }
+    }
+    contents = [prompt, image_part]
     response = client.models.generate_content(
         model='gemini-1.5-flash',
         contents=contents
@@ -327,18 +331,22 @@ def main():
             # Wait for page to load
             import time
             time.sleep(3)
-            # Take screenshot for Gemini
-            screenshot_path = 'scholarship_page.png'
-            driver.save_screenshot(screenshot_path)
-            # Use Gemini to analyze the page for application button or status
+            # Extract visible text from the page
+            page_text = driver.find_element(By.TAG_NAME, "body").text
+            # Use Gemini to analyze the text for scholarship/apply info
             prompt = (
-                "Analyze this scholarship webpage screenshot. "
-                "Is there a visible button or link to apply for the scholarship? "
-                "If so, what does it say? "
-                "Also, does the page indicate if the scholarship is closed, completed, or unavailable? "
+                "Analyze the following webpage text. "
+                "Does it contain a scholarship opportunity, or is it just an ad for a university or unrelated? "
+                "If it is a scholarship, is there a way to apply (e.g., a button or link with 'apply', 'application', or similar)? "
+                "If the scholarship is closed or unavailable, say so. "
                 "Summarize in JSON: {\"status\": 'open'|'closed'|'completed'|'not found', \"details\": <short reason>}"
             )
-            analysis = analyze_page_with_gemini(screenshot_path, prompt)
+            from google import genai
+            response = client.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=f"{prompt}\n\n{page_text[:5000]}"
+            )
+            analysis = response.text
             print("Gemini Analysis:", analysis)
             # Try to parse Gemini's JSON response
             import json
