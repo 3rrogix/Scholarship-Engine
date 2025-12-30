@@ -70,6 +70,7 @@ def get_user_info():
     """Collect user information via prompts, loading existing if available."""
     info = load_user_info()
     
+
     fields = [
         ('name', "Enter your full name: "),
         ('grade_level', "Enter your grade level (e.g., high school senior, college freshman, sophomore, junior, senior): "),
@@ -82,13 +83,14 @@ def get_user_info():
         ('gpa_weighted', "Enter your weighted GPA (on a 4.0 scale): "),
         ('gpa_unweighted', "Enter your unweighted GPA (on a 4.0 scale): "),
         ('resident', "Are you a resident of your country? (yes/no): "),
+        ('city', "Enter your city (for local scholarships, leave blank if not applicable): "),
+        ('state', "Enter your state (for local scholarships, leave blank if not applicable): "),
     ]
-    
     for key, prompt in fields:
-        if key not in info:
+        if key not in info or not info[key]:
             info[key] = input(prompt).strip()
-    
-    # Conditional fields removed, asked every run
+
+    # Transcript
     if 'transcript_path' not in info:
         transcript_path = input("Enter path to transcript file (PDF or TXT), leave blank to skip: ").strip()
         info['transcript_path'] = transcript_path
@@ -263,28 +265,25 @@ def main():
     save_user_info(user_info)
     
     # Check if all required fields are present
-    required = ['name', 'grade_level', 'gender', 'race', 'school', 'gpa_weighted', 'resident']
+    required = ['name', 'grade_level', 'gender', 'race', 'school', 'gpa_weighted', 'resident', 'city', 'state']
     if not all(key in user_info and user_info[key] for key in required):
         print("Some required info missing. Run again to complete setup.")
         return
     
-    # Ask for search criteria every time
-    local = input("Do you want local scholarships? (yes/no): ").strip().lower()
-    if local == 'yes':
-        city = input("Enter your city: ").strip()
-        state = input("Enter your state: ").strip()
-        query_extra = f" in {city} {state}"
-    else:
-        query_extra = ""
-    
+
+    print("\n--- Scholarship Search ---")
+    print("You can search for scholarships by any criteria (e.g., major, interests, demographic, city, state, etc.)")
+    print(f"Your saved city: {user_info.get('city', '')}, state: {user_info.get('state', '')}")
+    print("If you want to include your city/state, mention them in your search.")
+    search_query = input("Enter your scholarship search criteria (e.g., 'engineering scholarships for women in California'): ").strip()
+
     omit_criteria = input("Any specific criteria to omit (e.g., keywords, leave blank if none): ").strip()
-    
-    num_results = int(input("How many links to search through on Google? ").strip())
-    
-    query = f"scholarships for {user_info['grade_level']} {user_info['race']} {user_info['ethnicity']} students at {user_info['school']}{query_extra}"
+    query = search_query
     if omit_criteria:
         query += f" -{omit_criteria}"
-    
+
+    num_results = int(input("How many links to search through on Google? ").strip())
+
     scholarships = search_scholarships(query, num_results)
     print(f"Found {len(scholarships)} scholarships from search.")
     scholarships = [url for url in scholarships if is_scholarship_applicable(url, user_info)]
