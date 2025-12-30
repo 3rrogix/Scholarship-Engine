@@ -301,9 +301,30 @@ def main():
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     driver.get(url)
     input("If a CAPTCHA appears, please solve it in the browser. When you are done, press Enter here to continue...")
+    # After CAPTCHA, click the first search result link and store it
+    import time
+    from selenium.webdriver.common.by import By
+    time.sleep(2)  # Wait for page to fully load
+    first_link = None
+    try:
+        # Google search results links have tag 'a' and data-ved attribute, but avoid ads and special boxes
+        results = driver.find_elements(By.CSS_SELECTOR, 'a')
+        for a in results:
+            href = a.get_attribute('href')
+            if href and '/url?' in href and 'google.com' not in href:
+                first_link = href
+                break
+        if first_link:
+            print(f"Opening first search result: {first_link}")
+            driver.get(first_link)
+            # Store the link so it isn't clicked again
+            save_completed_scholarships({first_link})
+        else:
+            print("No valid search result link found.")
+    except Exception as e:
+        print(f"Error finding/clicking first link: {e}")
+    input("Press Enter to close the browser and finish...")
     driver.quit()
-
-    # Continue with the rest of your workflow (search_scholarships, etc.) if needed
 
 if __name__ == "__main__":
     main()
