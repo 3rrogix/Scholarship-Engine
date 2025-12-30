@@ -302,81 +302,80 @@ def main():
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     driver.get(url)
     input("If a CAPTCHA appears, please solve it in the browser. When you are done, press Enter here to continue...")
-    # After CAPTCHA, click the first search result link and store it
     import time
     from selenium.webdriver.common.by import By
     time.sleep(2)  # Wait for page to fully load
-    first_link = None
-    try:
-        # Try to find organic search results using Google's result containers
-        # Organic results are usually in div.g or div[data-header-feature] with a descendant a[href]
-        organic_results = driver.find_elements(By.CSS_SELECTOR, 'div.g')
-        for result in organic_results:
+    completed = load_completed_scholarships()
+    # Find all organic search result links
+    organic_results = driver.find_elements(By.CSS_SELECTOR, 'div.g')
+    found_links = []
+    for result in organic_results:
+        try:
             link = result.find_element(By.CSS_SELECTOR, 'a')
             href = link.get_attribute('href')
-            if href and href.startswith('http') and 'google.com' not in href:
-                first_link = href
+            if href and href.startswith('http') and 'google.com' not in href and href not in completed and href not in found_links:
+                found_links.append(href)
+        except Exception:
+            continue
+    # Fallback: try all visible a[href] links if not enough found
+    if len(found_links) < num_results:
+        links = driver.find_elements(By.CSS_SELECTOR, 'a[href]')
+        for link in links:
+            href = link.get_attribute('href')
+            if href and href.startswith('http') and 'google.com' not in href and href not in completed and href not in found_links:
+                found_links.append(href)
+            if len(found_links) >= num_results:
                 break
-        if not first_link:
-            # Fallback: try all visible a[href] links
-            links = driver.find_elements(By.CSS_SELECTOR, 'a[href]')
-            for link in links:
-                href = link.get_attribute('href')
-                if href and href.startswith('http') and 'google.com' not in href:
-                    first_link = href
-                    break
-        if first_link:
-            print(f"Opening first search result: {first_link}")
-            driver.get(first_link)
-            # Wait for page to load
-            import time
-            time.sleep(3)
-            # Extract visible text from the page
-            page_text = driver.find_element(By.TAG_NAME, "body").text
-            # Use Gemini to analyze the text for scholarship/apply info
-            prompt = (
-                "Analyze the following webpage text. "
-                "Does it contain a real scholarship opportunity, or is it just an ad for a university, or a scholarship only for attending that specific college/university? "
-                "If it is a scholarship only for students who attend the same college/university as the page, treat it as 'not found'. "
-                "If it is a real, general scholarship, is there a way to apply (e.g., a button or link with 'apply', 'application', or similar)? "
-                "If the scholarship is closed or unavailable, say so. "
-                "Summarize in JSON: {\"status\": 'open'|'closed'|'completed'|'not found', \"details\": <short reason>}"
-            )
-            from google import genai
-            response = client.models.generate_content(
-                model='gemini-3-flash-preview',
-                contents=f"{prompt}\n\n{page_text[:5000]}"
-            )
-            analysis = response.text
-            print("Gemini Analysis:", analysis)
-            # Try to parse Gemini's JSON response
-            import json
-            import re
-            status = 'not found'
-            details = ''
-            # Remove code block markers if present
-            cleaned = analysis.strip()
-            if cleaned.startswith('```json'):
-                cleaned = re.sub(r'^```json', '', cleaned).strip()
-            if cleaned.startswith('```'):
-                cleaned = re.sub(r'^```', '', cleaned).strip()
-            if cleaned.endswith('```'):
-                cleaned = re.sub(r'```$', '', cleaned).strip()
-            try:
-                result = json.loads(cleaned)
-                status = result.get('status', 'not found')
-                details = result.get('details', '')
-            except Exception:
-                print("Could not parse Gemini response as JSON.")
-                details = analysis
-            # Save the link with status and details
-            with open('links.txt', 'a') as f:
-                f.write(f"{first_link} | {status} | {details}\n")
-            print(f"Saved link with status: {status}")
-        else:
-            print("No valid search result link found.")
-    except Exception as e:
-        print(f"Error finding/clicking first link: {e}")
+    # Process up to num_results links
+    for idx, link_url in enumerate(found_links[:num_results]):
+        print(f"Opening search result {idx+1}: {link_url}")
+        driver.get(link_url)
+        time.sleep(2)
+        # Extract visible text from the page
+        page_text = driver.find_element(By.TAG_NAME, "body").text
+        # Use Gemini to analyze the text for scholarship/apply info
+        prompt = (
+            "Analyze the following webpage text. "
+            "Does it contain a real scholarship opportunity, or is it just an ad for a university, or a scholarship only for attending that specific college/university? "
+            "If it is a scholarship only for students who attend the same college/university as the page, treat it as 'not found'. "
+            "If it is a real, general scholarship, is there a way to apply (e.g., a button or link with 'apply', 'application', or similar)? "
+            "If the scholarship is closed or unavailable, say so. "
+            "Summarize in JSON: {\"status\": 'open'|'closed'|'completed'|'not found', \"details\": <short reason>}"
+        )
+        from google import genai
+        response = client.models.generate_content(
+            model='gemini-3-flash-preview',
+            contents=f"{prompt}\n\n{page_text[:5000]}"
+        )
+        analysis = response.text
+        print("Gemini Analysis:", analysis)
+        # Try to parse Gemini's JSON response
+        import json
+        import re
+        status = 'not found'
+        details = ''
+        # Remove code block markers if present
+        cleaned = analysis.strip()
+        if cleaned.startswith('```json'):
+            cleaned = re.sub(r'^```json', '', cleaned).strip()
+        if cleaned.startswith('```'):
+            cleaned = re.sub(r'^```', '', cleaned).strip()
+        if cleaned.endswith('```'):
+            cleaned = re.sub(r'```$', '', cleaned).strip()
+        try:
+            result = json.loads(cleaned)
+            status = result.get('status', 'not found')
+            details = result.get('details', '')
+        except Exception:
+            print("Could not parse Gemini response as JSON.")
+            details = analysis
+        # Save the link with status and details
+        with open('links.txt', 'a') as f:
+            f.write(f"{link_url} | {status} | {details}\n")
+        print(f"Saved link with status: {status}")
+        # Return to Google results page for next link
+        driver.back()
+        time.sleep(2)
     input("Press Enter to close the browser and finish...")
     driver.quit()
 
