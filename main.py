@@ -305,7 +305,20 @@ def main():
     import time
     from selenium.webdriver.common.by import By
     time.sleep(2)  # Wait for page to fully load
-    completed = load_completed_scholarships()
+    # Load all completed/omitted links (strip off status/details if present)
+    completed = set()
+    try:
+        with open('links.txt', 'r') as f:
+            for line in f:
+                if '|' in line:
+                    url = line.split('|', 1)[0].strip()
+                else:
+                    url = line.strip()
+                if url:
+                    completed.add(url)
+    except FileNotFoundError:
+        pass
+
     # Find all organic search result links
     organic_results = driver.find_elements(By.CSS_SELECTOR, 'div.g')
     found_links = []
@@ -326,13 +339,36 @@ def main():
                 found_links.append(href)
             if len(found_links) >= num_results:
                 break
-    # Process up to num_results links
+
+    # Process up to num_results links, skipping omitted/completed
     for idx, link_url in enumerate(found_links[:num_results]):
+        if link_url in completed:
+            print(f"Skipping omitted/completed link: {link_url}")
+            continue
         print(f"Opening search result {idx+1}: {link_url}")
         driver.get(link_url)
         time.sleep(2)
         # Extract visible text from the page
-        page_text = driver.find_element(By.TAG_NAME, "body").text
+        try:
+            page_text = driver.find_element(By.TAG_NAME, "body").text
+        except Exception:
+            page_text = ""
+
+        # Detect CAPTCHA/Cloudflare/robot checks
+        capcha_keywords = [
+            'captcha', 'cloudflare', 'robot check', 'are you human', 'verify you are human',
+            'please stand by', 'checking your browser', 'press and hold', 'security check',
+            'unusual traffic', 'verify you are not a robot', 'solve the puzzle', 'protection from attacks'
+        ]
+        if any(word in page_text.lower() for word in capcha_keywords):
+            print("CAPTCHA or anti-bot detected! Please solve it in the browser. After solving, press Enter to continue...")
+            input("(Browser is paused for manual intervention)")
+            # After user solves, try to reload text
+            try:
+                page_text = driver.find_element(By.TAG_NAME, "body").text
+            except Exception:
+                page_text = ""
+
         # Use Gemini to analyze the text for scholarship/apply info
         prompt = (
             "Analyze the following webpage text. "
