@@ -139,15 +139,12 @@ def search_scholarships(query, num_results=5):
 
 def analyze_page_with_gemini(image_path, prompt):
     """Use Gemini to analyze the screenshot."""
+    from google import genai
     with open(image_path, 'rb') as f:
         image_data = f.read()
-    contents = [
-        prompt,
-        {
-            'mime_type': 'image/png',
-            'data': image_data
-        }
-    ]
+    # Use the Gemini SDK's Image object for image input
+    image = genai.Image(data=image_data, mime_type='image/png')
+    contents = [prompt, image]
     response = client.models.generate_content(
         model='gemini-1.5-flash',
         contents=contents
