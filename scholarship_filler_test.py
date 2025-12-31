@@ -69,6 +69,46 @@ def fill_application(url, user_info, client):
         'start your application', 'continue to application', 'application form', 'apply', 'proceed to application'
     ]
 
+    def accept_cookies_if_present(driver):
+        # Try to accept cookies if the banner is present
+        try:
+            # Try common selectors for cookie accept buttons
+            selectors = [
+                "#onetrust-accept-btn-handler",
+                "button[aria-label='Accept Cookies']",
+                "button[title='Accept Cookies']",
+                "button:contains('Accept Cookies')",
+                "button:contains('Accept')",
+                "button.cookie-accept",
+                "button#accept-cookies"
+            ]
+            for selector in selectors:
+                try:
+                    element = driver.find_element(By.CSS_SELECTOR, selector)
+                    element.click()
+                    print("Accepted cookies using selector:", selector)
+                    time.sleep(1)
+                    return True
+                except Exception:
+                    continue
+            # Try by XPath as fallback
+            xpaths = [
+                "//button[contains(text(), 'Accept Cookies')]",
+                "//button[contains(text(), 'Accept')]"
+            ]
+            for xpath in xpaths:
+                try:
+                    element = driver.find_element(By.XPATH, xpath)
+                    element.click()
+                    print("Accepted cookies using XPath:", xpath)
+                    time.sleep(1)
+                    return True
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return False
+
     def find_and_click_apply(driver):
         # Try to find and click any button or link with apply-related keywords
         for keyword in apply_keywords:
@@ -78,8 +118,16 @@ def fill_application(url, user_info, client):
             elements = driver.find_elements(By.XPATH, xpath)
             for el in elements:
                 try:
+                    # Get current window handles before click
+                    old_handles = driver.window_handles
                     el.click()
                     time.sleep(3)
+                    # Check if a new tab/window opened
+                    new_handles = driver.window_handles
+                    if len(new_handles) > len(old_handles):
+                        # Switch to the newest tab
+                        driver.switch_to.window(new_handles[-1])
+                        print("Switched to new tab after clicking apply button.")
                     print(f"Clicked button/link with keyword: '{keyword}'")
                     return True
                 except Exception:
@@ -89,6 +137,10 @@ def fill_application(url, user_info, client):
     # Loop: follow apply buttons/links until a form or login is detected
     max_steps = 5
     for step in range(max_steps):
+        # Accept cookies if present (only on first step or if banner reappears)
+        if step == 0:
+            accept_cookies_if_present(driver)
+
         # Check for login form
         page_source = driver.page_source.lower()
         if 'login' in page_source or 'sign in' in page_source or 'log in' in page_source:
@@ -109,6 +161,8 @@ def fill_application(url, user_info, client):
             print("No more 'Apply' buttons/links found. Stopping navigation.")
             break
         time.sleep(2)
+        # Accept cookies again in case new site/tab has a banner
+        accept_cookies_if_present(driver)
 
     # Now proceed with screenshot and Gemini analysis as before
     screenshot_path = 'screenshot.png'
