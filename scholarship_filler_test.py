@@ -123,35 +123,39 @@ def fill_application(url, user_info, client):
 
     def find_and_click_apply(driver):
         # Try to find and click any button or link with apply-related keywords
-        for keyword in apply_keywords:
-            # Look for <a> or <button> elements containing the keyword (case-insensitive)
-            xpath = f"//a[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')] | " \
-                    f"//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')]"
-            elements = driver.find_elements(By.XPATH, xpath)
-            for el in elements:
-                try:
-                    # Get current window handles before click
-                    old_handles = driver.window_handles
-                    el.click()
-                    time.sleep(3)
-                    # Check if a new tab/window opened
-                    new_handles = driver.window_handles
-                    if len(new_handles) > len(old_handles):
-                        # Switch to the newest tab
-                        driver.switch_to.window(new_handles[-1])
-                        print("Switched to new tab after clicking apply button.")
-                        # Wait for the new page to finish loading and for a form/input to appear
-                        wait_for_page_load(driver, timeout=30)
-                        wait_for_form_or_input(driver, timeout=30)
-                    else:
-                        # Wait for the current page to finish loading and for a form/input to appear
-                        wait_for_page_load(driver, timeout=30)
-                        wait_for_form_or_input(driver, timeout=30)
-                    print(f"Clicked button/link with keyword: '{keyword}'")
-                    return True
-                except Exception:
-                    continue
-        return False
+    for keyword in apply_keywords:
+        # Look for <a> or <button> elements containing the keyword (case-insensitive)
+        xpath = f"//a[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')] | " \
+                f"//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')]"
+        elements = driver.find_elements(By.XPATH, xpath)
+        print(f"[DEBUG] Searching for elements with keyword '{keyword}': found {len(elements)} elements.")
+        for el in elements:
+            try:
+                # Get current window handles before click
+                old_handles = driver.window_handles
+                print(f"[DEBUG] Attempting to click element: {el.text}")
+                el.click()
+                time.sleep(3)
+                # Check if a new tab/window opened
+                new_handles = driver.window_handles
+                if len(new_handles) > len(old_handles):
+                    # Switch to the newest tab
+                    driver.switch_to.window(new_handles[-1])
+                    print("[DEBUG] Switched to new tab after clicking apply button.")
+                    # Wait for the new page to finish loading and for a form/input to appear
+                    wait_for_page_load(driver, timeout=30)
+                    wait_for_form_or_input(driver, timeout=30)
+                else:
+                    # Wait for the current page to finish loading and for a form/input to appear
+                    wait_for_page_load(driver, timeout=30)
+                    wait_for_form_or_input(driver, timeout=30)
+                print(f"[DEBUG] Clicked button/link with keyword: '{keyword}'")
+                return True
+            except Exception as e:
+                print(f"[DEBUG] Exception while clicking element: {e}")
+                continue
+    print("[DEBUG] No apply button/link found to click.")
+    return False
     def wait_for_page_load(driver, timeout=15):
         # Wait for the page to finish loading by checking document.readyState
         import time
@@ -237,6 +241,7 @@ def fill_application(url, user_info, client):
     try:
         # Fill text, email, number, and textarea fields
         input_fields = driver.find_elements(By.XPATH, "//input | //textarea")
+        print(f"[DEBUG] Found {len(input_fields)} input/textarea fields.")
         for element in input_fields:
             try:
                 field_type = element.get_attribute('type') or element.tag_name
@@ -266,14 +271,20 @@ def fill_application(url, user_info, client):
                         model='gemini-2.5-flash',
                         contents=essay_prompt
                     ).text
+                print(f"[DEBUG] Decided value for field (name: {name}, id: {id_}, label: {label}, placeholder: {placeholder}): {value}")
                 if value:
                     element.clear()
                     element.send_keys(value)
-            except Exception:
+                    print(f"[DEBUG] Filled field with value: {value}")
+                else:
+                    print(f"[DEBUG] No value to fill for field (name: {name}, id: {id_}, label: {label}, placeholder: {placeholder})")
+            except Exception as e:
+                print(f"[DEBUG] Exception while filling field: {e}")
                 continue
 
         # Fill select fields
         select_fields = driver.find_elements(By.TAG_NAME, 'select')
+        print(f"[DEBUG] Found {len(select_fields)} select fields.")
         for element in select_fields:
             try:
                 label = ''
@@ -286,11 +297,17 @@ def fill_application(url, user_info, client):
                 select = Select(element)
                 if 'race' in label or 'race' in name:
                     select.select_by_visible_text(user_info.get('race', ''))
+                    print(f"[DEBUG] Selected race: {user_info.get('race', '')}")
                 elif 'ethnicity' in label or 'ethnicity' in name:
                     select.select_by_visible_text(user_info.get('ethnicity', ''))
+                    print(f"[DEBUG] Selected ethnicity: {user_info.get('ethnicity', '')}")
                 elif 'gender' in label or 'gender' in name:
                     select.select_by_visible_text(user_info.get('gender', ''))
-            except Exception:
+                    print(f"[DEBUG] Selected gender: {user_info.get('gender', '')}")
+                else:
+                    print(f"[DEBUG] No matching select value for (label: {label}, name: {name})")
+            except Exception as e:
+                print(f"[DEBUG] Exception while filling select field: {e}")
                 continue
 
         # Try to click submit or next buttons
@@ -299,41 +316,47 @@ def fill_application(url, user_info, client):
         for keyword in button_keywords:
             # <button> elements
             buttons = driver.find_elements(By.XPATH, f"//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')]" )
+            print(f"[DEBUG] Found {len(buttons)} <button> elements for keyword '{keyword}'.")
             for btn in buttons:
                 try:
                     btn.click()
-                    print(f"Clicked button: {btn.text}")
+                    print(f"[DEBUG] Clicked button: {btn.text}")
                     time.sleep(2)
                     break
-                except Exception:
+                except Exception as e:
+                    print(f"[DEBUG] Exception while clicking button: {e}")
                     continue
             # <input type='submit'> elements
             inputs = driver.find_elements(By.XPATH, f"//input[@type='submit' and contains(translate(@value, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')]" )
+            print(f"[DEBUG] Found {len(inputs)} <input type='submit'> elements for keyword '{keyword}'.")
             for inp in inputs:
                 try:
                     inp.click()
-                    print(f"Clicked submit input: {inp.get_attribute('value')}")
+                    print(f"[DEBUG] Clicked submit input: {inp.get_attribute('value')}")
                     time.sleep(2)
                     break
-                except Exception:
+                except Exception as e:
+                    print(f"[DEBUG] Exception while clicking submit input: {e}")
                     continue
         # Try <a> elements styled as buttons (e.g., class contains 'button' and text matches)
         for keyword in button_keywords:
             links = driver.find_elements(By.XPATH, f"//a[contains(@class, 'button') and contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')]" )
+            print(f"[DEBUG] Found {len(links)} <a> elements for keyword '{keyword}'.")
             for link in links:
                 try:
                     link.click()
-                    print(f"Clicked link: {link.text}")
+                    print(f"[DEBUG] Clicked link: {link.text}")
                     time.sleep(2)
                     break
-                except Exception:
+                except Exception as e:
+                    print(f"[DEBUG] Exception while clicking link: {e}")
                     continue
 
-        print("Filled out the form as best as possible. Please review and submit manually.")
+        print("[DEBUG] Filled out the form as best as possible. Please review and submit manually.")
         input("Press Enter to close the browser...")
         driver.quit()
     except Exception as e:
-        print("Error while filling the form:", e)
+        print(f"[DEBUG] Error while filling the form: {e}")
         input("Press Enter to close the browser...")
         driver.quit()
 
