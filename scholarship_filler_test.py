@@ -58,10 +58,59 @@ def fill_application(url, user_info, client):
     driver.get("https://accounts.google.com/signin")
     input("Please sign in to your Google account in the browser. After signing in, press Enter here to continue...")
 
-    # Step 2: Open scholarship link
+    # Step 2: Open scholarship link and follow 'Apply' buttons until form or login
     print(f"Opening {url} in browser...")
     driver.get(url)
     time.sleep(3)
+
+    # Keywords to look for in button/link text
+    apply_keywords = [
+        'apply now', 'apply here', 'go to form', 'start application', 'begin application',
+        'start your application', 'continue to application', 'application form', 'apply', 'proceed to application'
+    ]
+
+    def find_and_click_apply(driver):
+        # Try to find and click any button or link with apply-related keywords
+        for keyword in apply_keywords:
+            # Look for <a> or <button> elements containing the keyword (case-insensitive)
+            xpath = f"//a[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')] | " \
+                    f"//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')]"
+            elements = driver.find_elements(By.XPATH, xpath)
+            for el in elements:
+                try:
+                    el.click()
+                    time.sleep(3)
+                    print(f"Clicked button/link with keyword: '{keyword}'")
+                    return True
+                except Exception:
+                    continue
+        return False
+
+    # Loop: follow apply buttons/links until a form or login is detected
+    max_steps = 5
+    for step in range(max_steps):
+        # Check for login form
+        page_source = driver.page_source.lower()
+        if 'login' in page_source or 'sign in' in page_source or 'log in' in page_source:
+            print("Login page detected. Please log in manually if required.")
+            input("After logging in, press Enter to continue...")
+            time.sleep(2)
+            continue
+
+        # Check for form fields (input, select, textarea)
+        form_elements = driver.find_elements(By.XPATH, "//input | //select | //textarea")
+        if len(form_elements) > 2:
+            print("Form detected. Proceeding to fill the form.")
+            break
+
+        # Try to find and click an apply button/link
+        found = find_and_click_apply(driver)
+        if not found:
+            print("No more 'Apply' buttons/links found. Stopping navigation.")
+            break
+        time.sleep(2)
+
+    # Now proceed with screenshot and Gemini analysis as before
     screenshot_path = 'screenshot.png'
     driver.save_screenshot(screenshot_path)
     prompt = """
