@@ -176,60 +176,110 @@ def fill_application(url, user_info, client):
         # Accept cookies again in case new site/tab has a banner
         accept_cookies_if_present(driver)
 
-    # Now proceed with screenshot and Gemini analysis as before
-    screenshot_path = 'screenshot.png'
-    driver.save_screenshot(screenshot_path)
-    prompt = """
-    Analyze this webpage screenshot. Describe all form fields (inputs, selects, textareas), their labels, types, IDs or names if visible, and for textareas, include the full prompt or question text.
-    Also describe buttons and their purposes (e.g., submit, next).
-    Provide the information in a structured JSON format like:
-    {"fields": [{"label": "First Name", "type": "text", "selector": "#fname"}], "buttons": [{"label": "Submit", "selector": "#submit"}]}
-    """
-    analysis = analyze_page_with_gemini(screenshot_path, prompt, client)
-    print("Gemini Analysis:", analysis)
+    # Now analyze HTML elements directly and fill the form
+    print("Analyzing HTML elements to fill the form...")
     try:
-        data = json.loads(analysis)
-    except Exception:
-        print("Failed to parse Gemini response as JSON.")
-        input("Press enter to continue or 'q' to quit: ")
+        # Fill text, email, number, and textarea fields
+        input_fields = driver.find_elements(By.XPATH, "//input | //textarea")
+        for element in input_fields:
+            try:
+                field_type = element.get_attribute('type') or element.tag_name
+                name = (element.get_attribute('name') or '').lower()
+                id_ = (element.get_attribute('id') or '').lower()
+                placeholder = (element.get_attribute('placeholder') or '').lower()
+                label = ''
+                # Try to find associated label
+                if id_:
+                    label_els = driver.find_elements(By.XPATH, f"//label[@for='{id_}']")
+                    if label_els:
+                        label = label_els[0].text.lower()
+                # Heuristics to fill fields
+                value = ''
+                if 'name' in name or 'name' in id_ or 'name' in label or 'name' in placeholder:
+                    value = user_info.get('name', '')
+                elif 'school' in name or 'school' in id_ or 'school' in label or 'school' in placeholder:
+                    value = user_info.get('school', '')
+                elif 'gpa' in name or 'gpa' in id_ or 'gpa' in label or 'gpa' in placeholder:
+                    value = user_info.get('gpa_weighted', '')
+                elif 'email' in name or 'email' in id_ or 'email' in label or 'email' in placeholder:
+                    value = user_info.get('email', '')
+                elif 'essay' in name or 'essay' in id_ or 'essay' in label or 'essay' in placeholder or 'personal statement' in label:
+                    prompt_text = label or placeholder or name or id_
+                    essay_prompt = f"Write an essay responding to this prompt: {prompt_text}. Use the following information from the user: {user_info.get('essays', '')}"
+                    value = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=essay_prompt
+                    ).text
+                if value:
+                    element.clear()
+                    element.send_keys(value)
+            except Exception:
+                continue
+
+        # Fill select fields
+        select_fields = driver.find_elements(By.TAG_NAME, 'select')
+        for element in select_fields:
+            try:
+                label = ''
+                id_ = (element.get_attribute('id') or '').lower()
+                name = (element.get_attribute('name') or '').lower()
+                if id_:
+                    label_els = driver.find_elements(By.XPATH, f"//label[@for='{id_}']")
+                    if label_els:
+                        label = label_els[0].text.lower()
+                select = Select(element)
+                if 'race' in label or 'race' in name:
+                    select.select_by_visible_text(user_info.get('race', ''))
+                elif 'ethnicity' in label or 'ethnicity' in name:
+                    select.select_by_visible_text(user_info.get('ethnicity', ''))
+                elif 'gender' in label or 'gender' in name:
+                    select.select_by_visible_text(user_info.get('gender', ''))
+            except Exception:
+                continue
+
+        # Try to click submit or next buttons
+        button_keywords = ['submit', 'next', 'continue', 'apply', 'finish', 'save']
+        # Try <button> and <input type='submit'>
+        for keyword in button_keywords:
+            # <button> elements
+            buttons = driver.find_elements(By.XPATH, f"//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')]" )
+            for btn in buttons:
+                try:
+                    btn.click()
+                    print(f"Clicked button: {btn.text}")
+                    time.sleep(2)
+                    break
+                except Exception:
+                    continue
+            # <input type='submit'> elements
+            inputs = driver.find_elements(By.XPATH, f"//input[@type='submit' and contains(translate(@value, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')]" )
+            for inp in inputs:
+                try:
+                    inp.click()
+                    print(f"Clicked submit input: {inp.get_attribute('value')}")
+                    time.sleep(2)
+                    break
+                except Exception:
+                    continue
+        # Try <a> elements styled as buttons (e.g., class contains 'button' and text matches)
+        for keyword in button_keywords:
+            links = driver.find_elements(By.XPATH, f"//a[contains(@class, 'button') and contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')]" )
+            for link in links:
+                try:
+                    link.click()
+                    print(f"Clicked link: {link.text}")
+                    time.sleep(2)
+                    break
+                except Exception:
+                    continue
+
+        print("Filled out the form as best as possible. Please review and submit manually.")
+        input("Press Enter to close the browser...")
         driver.quit()
-        return
-    for field in data.get('fields', []):
-        label = field['label'].lower()
-        selector = field.get('selector')
-        field_type = field.get('type')
-        if not selector:
-            continue
-        try:
-            element = driver.find_element(By.CSS_SELECTOR, selector)
-        except Exception:
-            continue
-        if field_type == 'select':
-            select = Select(element)
-            if 'race' in label:
-                select.select_by_visible_text(user_info.get('race', ''))
-            elif 'ethnicity' in label:
-                select.select_by_visible_text(user_info.get('ethnicity', ''))
-            elif 'gender' in label:
-                select.select_by_visible_text(user_info.get('gender', ''))
-        elif field_type in ['text', 'textarea']:
-            if 'name' in label:
-                element.send_keys(user_info.get('name', ''))
-            elif 'school' in label:
-                element.send_keys(user_info.get('school', ''))
-            elif 'gpa' in label:
-                element.send_keys(user_info.get('gpa_weighted', ''))
-            elif 'essay' in label or 'personal statement' in label or 'textarea' in field_type:
-                prompt_text = field.get('prompt', label)
-                essay_prompt = f"Write an essay responding to this prompt: {prompt_text}. Use the following information from the user: {user_info.get('essays', '')}"
-                essay_response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=essay_prompt
-                ).text
-                element.send_keys(essay_response)
-    print("Filled out the form as best as possible. Please review and submit manually.")
-    input("Press Enter to close the browser...")
-    driver.quit()
+    except Exception as e:
+        print("Error while filling the form:", e)
+        input("Press Enter to close the browser...")
+        driver.quit()
 
 def main():
     api_key = load_api_key()
