@@ -215,10 +215,16 @@ def fill_application(url, user_info, client):
         accept_cookies_if_present(driver)
 
     # Now analyze HTML elements directly and fill the form
-    # Check for password field before filling the form
-    password_fields = driver.find_elements(By.XPATH, "//input[@type='password']")
-    if password_fields:
-        print("Login form detected. Please log in manually if required.")
+    # Check for login page by scanning title and visible text for login-related keywords
+    login_keywords = ['login', 'sign in', 'log in', 'account', 'authentication', 'password', 'user id', 'username']
+    page_title = driver.title.lower()
+    try:
+        page_text = driver.find_element(By.TAG_NAME, 'body').text.lower()
+    except Exception:
+        page_text = ''
+    is_login_page = any(kw in page_title or kw in page_text for kw in login_keywords)
+    if is_login_page:
+        print("Login page detected. Please log in manually if required.")
         input("After logging in, press Enter to continue...")
         wait_for_page_load(driver, timeout=30)
         wait_for_form_or_input(driver, timeout=30)
