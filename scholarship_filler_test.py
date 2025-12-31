@@ -128,11 +128,28 @@ def fill_application(url, user_info, client):
                         # Switch to the newest tab
                         driver.switch_to.window(new_handles[-1])
                         print("Switched to new tab after clicking apply button.")
+                        # Wait for the new page to finish loading
+                        wait_for_page_load(driver)
+                    else:
+                        # Wait for the current page to finish loading
+                        wait_for_page_load(driver)
                     print(f"Clicked button/link with keyword: '{keyword}'")
                     return True
                 except Exception:
                     continue
         return False
+    def wait_for_page_load(driver, timeout=15):
+        # Wait for the page to finish loading by checking document.readyState
+        import time
+        start = time.time()
+        while time.time() - start < timeout:
+            try:
+                ready = driver.execute_script('return document.readyState')
+                if ready == 'complete':
+                    return
+            except Exception:
+                pass
+            time.sleep(0.5)
 
     # Loop: follow apply buttons/links until a form or login is detected
     max_steps = 5
@@ -141,11 +158,15 @@ def fill_application(url, user_info, client):
         if step == 0:
             accept_cookies_if_present(driver)
 
+        # Wait for the page to finish loading
+        wait_for_page_load(driver)
+
         # Check for login form
         page_source = driver.page_source.lower()
         if 'login' in page_source or 'sign in' in page_source or 'log in' in page_source:
             print("Login page detected. Please log in manually if required.")
             input("After logging in, press Enter to continue...")
+            wait_for_page_load(driver)
             time.sleep(2)
             continue
 
