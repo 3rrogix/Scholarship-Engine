@@ -161,10 +161,13 @@ def fill_application(url, user_info, client):
         # Wait for the page to finish loading
         wait_for_page_load(driver)
 
-        # Check for login form
+        # Check for login form (by keywords or password field)
         page_source = driver.page_source.lower()
-        if 'login' in page_source or 'sign in' in page_source or 'log in' in page_source:
-            print("Login page detected. Please log in manually if required.")
+        password_fields = driver.find_elements(By.XPATH, "//input[@type='password']")
+        if (
+            'login' in page_source or 'sign in' in page_source or 'log in' in page_source or password_fields
+        ):
+            print("Login form detected. Please log in manually if required.")
             input("After logging in, press Enter to continue...")
             wait_for_page_load(driver)
             time.sleep(2)
