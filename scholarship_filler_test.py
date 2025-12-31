@@ -151,9 +151,21 @@ def fill_application(url, user_info, client):
 
         # Check for form fields (input, select, textarea)
         form_elements = driver.find_elements(By.XPATH, "//input | //select | //textarea")
+        # Only proceed if there are multiple input fields (not just a search box)
         if len(form_elements) > 2:
-            print("Form detected. Proceeding to fill the form.")
-            break
+            # Check if this is just a search form (e.g., only one text input with 'search' in placeholder)
+            text_inputs = driver.find_elements(By.XPATH, "//input[@type='text']")
+            if len(form_elements) == 1 and text_inputs:
+                placeholder = text_inputs[0].get_attribute('placeholder')
+                if placeholder and 'search' in placeholder.lower():
+                    # This is just a search box, not a real form
+                    pass
+                else:
+                    print("Form detected. Proceeding to fill the form.")
+                    break
+            else:
+                print("Form detected. Proceeding to fill the form.")
+                break
 
         # Try to find and click an apply button/link
         found = find_and_click_apply(driver)
