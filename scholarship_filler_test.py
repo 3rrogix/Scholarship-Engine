@@ -50,18 +50,18 @@ def analyze_page_with_gemini(image_path, prompt, client):
     return response.text
 
 def fill_application(url, user_info, client):
-        def wait_for_form_or_input(driver, timeout=30):
-            # Wait for a form, input, or textarea to appear
-            import time
-            start = time.time()
-            while time.time() - start < timeout:
-                try:
-                    elements = driver.find_elements(By.XPATH, "//form | //input | //textarea")
-                    if elements:
-                        return
-                except Exception:
-                    pass
-                time.sleep(0.5)
+    def wait_for_form_or_input(driver, timeout=30):
+        # Wait for a form, input, or textarea to appear
+        import time
+        start = time.time()
+        while time.time() - start < timeout:
+            try:
+                elements = driver.find_elements(By.XPATH, "//form | //input | //textarea")
+                if elements:
+                    return
+            except Exception:
+                pass
+            time.sleep(0.5)
     options = webdriver.ChromeOptions()
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
