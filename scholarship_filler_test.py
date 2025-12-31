@@ -222,14 +222,18 @@ def fill_application(url, user_info, client):
         page_text = driver.find_element(By.TAG_NAME, 'body').text.lower()
     except Exception:
         page_text = ''
-    is_login_page = any(kw in page_title or kw in page_text for kw in login_keywords)
+    print(f"[DEBUG] Page title: {page_title}")
+    print(f"[DEBUG] First 500 chars of page text: {page_text[:500]}")
+    found_keywords = [kw for kw in login_keywords if kw in page_title or kw in page_text]
+    print(f"[DEBUG] Detected login keywords: {found_keywords}")
+    is_login_page = bool(found_keywords)
     if is_login_page:
-        print("Login page detected. Please log in manually if required.")
+        print("[DEBUG] Login page detected. Please log in manually if required.")
         input("After logging in, press Enter to continue...")
         wait_for_page_load(driver, timeout=30)
         wait_for_form_or_input(driver, timeout=30)
 
-    print("Analyzing HTML elements to fill the form...")
+    print("[DEBUG] Analyzing HTML elements to fill the form...")
     try:
         # Fill text, email, number, and textarea fields
         input_fields = driver.find_elements(By.XPATH, "//input | //textarea")
