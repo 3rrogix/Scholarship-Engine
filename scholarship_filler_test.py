@@ -215,6 +215,14 @@ def fill_application(url, user_info, client):
         accept_cookies_if_present(driver)
 
     # Now analyze HTML elements directly and fill the form
+    # Check for password field before filling the form
+    password_fields = driver.find_elements(By.XPATH, "//input[@type='password']")
+    if password_fields:
+        print("Login form detected. Please log in manually if required.")
+        input("After logging in, press Enter to continue...")
+        wait_for_page_load(driver, timeout=30)
+        wait_for_form_or_input(driver, timeout=30)
+
     print("Analyzing HTML elements to fill the form...")
     try:
         # Fill text, email, number, and textarea fields
