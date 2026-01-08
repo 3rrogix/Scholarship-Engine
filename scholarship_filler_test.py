@@ -351,8 +351,8 @@ def fill_application(url, user_info, client):
         while True:
             user_input = input("Should the script continue? (y/n): ").strip().lower()
             if user_input == 'y':
-                print("Continuing script. The browser will remain open for further actions or next steps.")
-                return
+                print("Continuing script. The browser will remain open and the script will continue to fill the form.")
+                break
             elif user_input == 'n':
                 print("Closing the browser...")
                 driver.quit()
