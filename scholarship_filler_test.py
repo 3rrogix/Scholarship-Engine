@@ -124,32 +124,26 @@ def fill_application(url, user_info, client):
     def find_and_click_apply(driver):
         # Try to find and click any button or link with apply-related keywords
         for keyword in apply_keywords:
-            # Look for <a> or <button> elements containing the keyword (case-insensitive)
             xpath = f"//a[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')] | " \
                     f"//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{keyword}')]"
             elements = driver.find_elements(By.XPATH, xpath)
             print(f"[DEBUG] Searching for elements with keyword '{keyword}': found {len(elements)} elements.")
             for el in elements:
                 try:
-                    # Get current window handles before click
                     old_handles = driver.window_handles
                     print(f"[DEBUG] Attempting to click element: {el.text}")
                     el.click()
                     time.sleep(3)
-                    # Check if a new tab/window opened
                     new_handles = driver.window_handles
                     if len(new_handles) > len(old_handles):
-                        # Switch to the newest tab
                         driver.switch_to.window(new_handles[-1])
                         print("[DEBUG] Switched to new tab after clicking apply button.")
-                        # Wait for the new page to finish loading and for a form/input to appear
                         wait_for_page_load(driver, timeout=30)
-                        wait_for_form_or_input(driver, timeout=30)
                     else:
-                        # Wait for the current page to finish loading and for a form/input to appear
                         wait_for_page_load(driver, timeout=30)
-                        wait_for_form_or_input(driver, timeout=30)
                     print(f"[DEBUG] Clicked button/link with keyword: '{keyword}'")
+                    # Instead of trying to detect a form, prompt the user to continue when the form is ready
+                    input("If a new tab or page opened, please manually navigate to the application form. Once the form is visible and ready to be filled, press Enter to continue...")
                     return True
                 except Exception as e:
                     print(f"[DEBUG] Exception while clicking element: {e}")
