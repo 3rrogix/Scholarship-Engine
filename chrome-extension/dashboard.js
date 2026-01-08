@@ -199,17 +199,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Review link with Gemini
-  async function reviewLinkWithGemini(link, idx) {
+  async function reviewLinkWithGemini(link, idx, cb) {
     searchStatus.textContent = `Reviewing: ${link}`;
-    // Open the link in a new tab, inject a content script to get page text, then close tab
     chrome.storage.local.get(['geminiApiKey', 'scholarshipLinks'], (result) => {
       const apiKey = result.geminiApiKey;
       if (!apiKey) {
         searchStatus.textContent = 'Gemini API key not set.';
+        if (cb) cb();
         return;
       }
       chrome.tabs.create({ url: link, active: false }, (tab) => {
-        // Wait for tab to load, then inject script
         const tabId = tab.id;
         function handleTabUpdated(updatedTabId, info) {
           if (updatedTabId === tabId && info.status === 'complete') {
@@ -244,11 +243,13 @@ document.addEventListener('DOMContentLoaded', () => {
                   searchStatus.textContent = `Reviewed: ${link} (${status})`;
                   chrome.tabs.remove(tabId);
                   chrome.tabs.onUpdated.removeListener(handleTabUpdated);
+                  if (cb) cb();
                 })
                 .catch(() => {
                   searchStatus.textContent = 'Gemini API error.';
                   chrome.tabs.remove(tabId);
                   chrome.tabs.onUpdated.removeListener(handleTabUpdated);
+                  if (cb) cb();
                 });
             });
           }
@@ -257,4 +258,21 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  // Review all links with Gemini
+  const reviewAllBtn = document.getElementById('review-all');
+  reviewAllBtn.addEventListener('click', async () => {
+    chrome.storage.local.get(['scholarshipLinks'], (result) => {
+      const links = result.scholarshipLinks || [];
+      function reviewNext(i) {
+        if (i >= links.length) {
+          searchStatus.textContent = 'All links reviewed.';
+          loadLinks();
+          return;
+        }
+        reviewLinkWithGemini(links[i].url, i, () => reviewNext(i + 1));
+      }
+      reviewNext(0);
+    });
+  });
 });
