@@ -31,15 +31,59 @@ document.addEventListener('DOMContentLoaded', () => {
   const addLinkForm = document.getElementById('add-link-form');
   const newLinkInput = document.getElementById('new-link');
 
+  // Helper to shorten URLs
+  function shortenUrl(url) {
+    try {
+      let u = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+      u = u.replace(/\.[a-z]{2,6}([\/\?#].*)?$/, ''); // Remove domain ending
+      return u.length > 40 ? u.slice(0, 37) + '...' : u;
+    } catch {
+      return url;
+    }
+  }
+
+  // Render links with status, color, saved state, and review button
   function renderLinks(links) {
     linksList.innerHTML = '';
-    links.forEach((link, idx) => {
+    links.forEach((linkObj, idx) => {
+      // Support old format (string) and new format (object)
+      let link = typeof linkObj === 'string' ? linkObj : linkObj.url;
+      let status = linkObj.status || '';
+      let saved = linkObj.saved || false;
+      let colorClass = '';
+      if (status === 'open') colorClass = 'link-status-open';
+      else if (status === 'closed') colorClass = 'link-status-closed';
+      else if (status === 'not found') colorClass = 'link-status-notfound';
+      else if (status === 'ad') colorClass = 'link-status-ad';
       const li = document.createElement('li');
       const a = document.createElement('a');
       a.href = link;
-      a.textContent = link;
+      a.className = 'short-link ' + colorClass + (saved ? ' link-saved' : '');
+      a.textContent = shortenUrl(link);
+      a.title = link;
       a.target = '_blank';
       li.appendChild(a);
+      // Status label
+      if (status) {
+        const st = document.createElement('span');
+        st.textContent = ' [' + status + ']';
+        st.className = colorClass;
+        li.appendChild(st);
+      }
+      // Saved toggle
+      const saveBtn = document.createElement('button');
+      saveBtn.textContent = saved ? 'Unsave' : 'Save';
+      saveBtn.onclick = () => {
+        links[idx].saved = !saved;
+        chrome.storage.local.set({ scholarshipLinks: links }, () => renderLinks(links));
+      };
+      li.appendChild(saveBtn);
+      // Review button
+      const reviewBtn = document.createElement('button');
+      reviewBtn.textContent = 'Review with Gemini';
+      reviewBtn.onclick = () => reviewLinkWithGemini(link, idx);
+      li.appendChild(reviewBtn);
+      // Remove button
       const delBtn = document.createElement('button');
       delBtn.textContent = 'Remove';
       delBtn.addEventListener('click', () => {
@@ -51,9 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Update loadLinks to support new format
   function loadLinks() {
     chrome.storage.local.get(['scholarshipLinks'], (result) => {
-      renderLinks(result.scholarshipLinks || []);
+      let links = result.scholarshipLinks || [];
+      // Convert old string format to object
+      links = links.map(l => typeof l === 'string' ? { url: l } : l);
+      chrome.storage.local.set({ scholarshipLinks: links }, () => renderLinks(links));
     });
   }
   loadLinks();
@@ -149,4 +197,64 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   });
+
+  // Review link with Gemini
+  async function reviewLinkWithGemini(link, idx) {
+    searchStatus.textContent = `Reviewing: ${link}`;
+    // Open the link in a new tab, inject a content script to get page text, then close tab
+    chrome.storage.local.get(['geminiApiKey', 'scholarshipLinks'], (result) => {
+      const apiKey = result.geminiApiKey;
+      if (!apiKey) {
+        searchStatus.textContent = 'Gemini API key not set.';
+        return;
+      }
+      chrome.tabs.create({ url: link, active: false }, (tab) => {
+        // Wait for tab to load, then inject script
+        const tabId = tab.id;
+        function handleTabUpdated(updatedTabId, info) {
+          if (updatedTabId === tabId && info.status === 'complete') {
+            chrome.scripting.executeScript({
+              target: { tabId },
+              func: () => document.body.innerText.slice(0, 5000)
+            }, (results) => {
+              const pageText = results && results[0] && results[0].result;
+              // Call Gemini API
+              fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + apiKey, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: `Classify this page as a scholarship opportunity (open), closed, not found, or ad. Respond with only one of: open, closed, not found, ad.\n\n${pageText}` }] }]
+                })
+              })
+                .then(r => r.json())
+                .then(data => {
+                  let status = 'not found';
+                  try {
+                    const txt = data.candidates[0].content.parts[0].text.toLowerCase();
+                    if (txt.includes('open')) status = 'open';
+                    else if (txt.includes('closed')) status = 'closed';
+                    else if (txt.includes('ad')) status = 'ad';
+                    else status = 'not found';
+                  } catch {}
+                  chrome.storage.local.get(['scholarshipLinks'], (r2) => {
+                    const links = r2.scholarshipLinks || [];
+                    links[idx].status = status;
+                    chrome.storage.local.set({ scholarshipLinks: links }, () => renderLinks(links));
+                  });
+                  searchStatus.textContent = `Reviewed: ${link} (${status})`;
+                  chrome.tabs.remove(tabId);
+                  chrome.tabs.onUpdated.removeListener(handleTabUpdated);
+                })
+                .catch(() => {
+                  searchStatus.textContent = 'Gemini API error.';
+                  chrome.tabs.remove(tabId);
+                  chrome.tabs.onUpdated.removeListener(handleTabUpdated);
+                });
+            });
+          }
+        }
+        chrome.tabs.onUpdated.addListener(handleTabUpdated);
+      });
+    });
+  }
 });
