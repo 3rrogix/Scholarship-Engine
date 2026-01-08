@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  contents: [{ parts: [{ text: `Classify this page as a scholarship opportunity (open), closed, not found, or ad. Respond with only one of: open, closed, not found, ad.\n\n${pageText}` }] }]
+                  contents: [{ parts: [{ text: `Classify this page as a scholarship opportunity (open) if the application seems to be open, closed if you see the scholarship is past its due date, not found if you can't find a place to apply for the scholarship, or ad. If the scholarship is only available to students of a specific college or university, classify it as an ad. Respond with only one of: open, closed, not found, ad.\n\n${pageText}` }] }]
                 })
               })
                 .then(r => r.json())
@@ -264,13 +264,16 @@ document.addEventListener('DOMContentLoaded', () => {
   reviewAllBtn.addEventListener('click', async () => {
     chrome.storage.local.get(['scholarshipLinks'], (result) => {
       const links = result.scholarshipLinks || [];
+      const delayMs = 2500; // 2.5 seconds between requests to avoid rate limits
       function reviewNext(i) {
         if (i >= links.length) {
           searchStatus.textContent = 'All links reviewed.';
           loadLinks();
           return;
         }
-        reviewLinkWithGemini(links[i].url, i, () => reviewNext(i + 1));
+        reviewLinkWithGemini(links[i].url, i, () => {
+          setTimeout(() => reviewNext(i + 1), delayMs);
+        });
       }
       reviewNext(0);
     });
