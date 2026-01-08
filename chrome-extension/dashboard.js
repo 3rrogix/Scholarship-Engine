@@ -94,4 +94,22 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => resumeStatus.textContent = '', 2000);
     });
   });
+
+  // Scholarship Search
+  const searchForm = document.getElementById('search-form');
+  const searchQueryInput = document.getElementById('search-query');
+  const searchStatus = document.getElementById('search-status');
+
+  searchForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const query = searchQueryInput.value.trim();
+    if (!query) return;
+    searchStatus.textContent = 'Searching...';
+    // Use Google Custom Search API or fallback to Bing as fetch (no direct Google scraping in browser)
+    // For demo, use Bing Web Search API (user must provide their own key if needed)
+    // Here, we just open a Google search tab for the query and let the user handle it
+    const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+    chrome.tabs.create({ url: googleUrl });
+    searchStatus.textContent = 'Opened Google search in new tab. Please review and add links manually.';
+  });
 });
