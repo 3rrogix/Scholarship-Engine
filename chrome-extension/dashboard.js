@@ -112,4 +112,41 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.tabs.create({ url: googleUrl });
     searchStatus.textContent = 'Opened Google search in new tab. Please review and add links manually.';
   });
+
+  // Import links from Google search tab
+  const importLinksBtn = document.getElementById('import-links');
+  importLinksBtn.addEventListener('click', async () => {
+    searchStatus.textContent = 'Importing links from Google search tab...';
+    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+      const tab = tabs[0];
+      if (!tab || !tab.url.includes('google.com/search')) {
+        searchStatus.textContent = 'Please focus a Google search results tab.';
+        return;
+      }
+      chrome.scripting.executeScript({
+        target: {tabId: tab.id},
+        files: ['content.js']
+      });
+    });
+  });
+
+  // Listen for extracted links from content script
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.type === 'EXTRACTED_LINKS') {
+      const links = msg.links || [];
+      if (links.length === 0) {
+        searchStatus.textContent = 'No links found.';
+        return;
+      }
+      chrome.storage.local.get(['scholarshipLinks'], (result) => {
+        const existing = result.scholarshipLinks || [];
+        const newLinks = links.filter(l => !existing.includes(l));
+        const updated = existing.concat(newLinks);
+        chrome.storage.local.set({ scholarshipLinks: updated }, () => {
+          renderLinks(updated);
+          searchStatus.textContent = `Imported ${newLinks.length} new links.`;
+        });
+      });
+    }
+  });
 });

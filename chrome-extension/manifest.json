@@ -3,7 +3,18 @@
   "name": "Scholarship Engine Dashboard",
   "version": "0.1.0",
   "description": "Manage Gemini API key, saved links, and your resume for scholarship automation.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "scripting", "tabs"],
+    "host_permissions": [
+      "http://*/*",
+      "https://*/*"
+    ],
+    "content_scripts": [
+      {
+        "matches": ["https://www.google.com/search*"],
+        "js": ["content.js"],
+        "run_at": "document_end"
+      }
+    ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
