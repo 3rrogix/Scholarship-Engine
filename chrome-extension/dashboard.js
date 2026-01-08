@@ -226,7 +226,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
               })
                 .then(r => r.json())
-                .then(data => {
+                .then((data) => {
+                  // Check for Gemini API rate limit error
+                  if (data && data.error && data.error.code === 429) {
+                    searchStatus.textContent = `Reviewed: ${link} (error 429 rate limit)`;
+                    chrome.tabs.remove(tabId);
+                    chrome.tabs.onUpdated.removeListener(handleTabUpdated);
+                    if (cb) cb();
+                    return;
+                  }
                   let status = 'not found';
                   try {
                     const txt = data.candidates[0].content.parts[0].text.toLowerCase();
@@ -245,8 +253,13 @@ document.addEventListener('DOMContentLoaded', () => {
                   chrome.tabs.onUpdated.removeListener(handleTabUpdated);
                   if (cb) cb();
                 })
-                .catch(() => {
-                  searchStatus.textContent = 'Gemini API error.';
+                .catch((err) => {
+                  // Try to detect 429 error from fetch
+                  if (err && err.message && err.message.includes('429')) {
+                    searchStatus.textContent = `Reviewed: ${link} (error 429 rate limit)`;
+                  } else {
+                    searchStatus.textContent = 'Gemini API error.';
+                  }
                   chrome.tabs.remove(tabId);
                   chrome.tabs.onUpdated.removeListener(handleTabUpdated);
                   if (cb) cb();
