@@ -1,0 +1,70 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f7f7f7;
+  margin: 0;
+  padding: 0;
+}
+.container {
+  background: #fff;
+  max-width: 500px;
+  margin: 30px auto;
+  padding: 24px 32px 32px 32px;
+  border-radius: 12px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+}
+h1 {
+  font-size: 1.7em;
+  margin-bottom: 0.5em;
+}
+h2 {
+  font-size: 1.2em;
+  margin-top: 1.5em;
+}
+form {
+  margin-bottom: 1em;
+}
+input[type="password"], input[type="url"], textarea {
+  width: 100%;
+  padding: 8px;
+  margin: 6px 0 12px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1em;
+}
+button {
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 1em;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+button:hover {
+  background: #1565c0;
+}
+#api-key-status, #resume-status {
+  margin-left: 10px;
+  color: #388e3c;
+  font-size: 0.95em;
+}
+#links-list {
+  list-style: none;
+  padding: 0;
+}
+#links-list li {
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+#links-list button {
+  margin-left: 10px;
+  background: #e53935;
+  color: #fff;
+  padding: 2px 8px;
+  font-size: 0.9em;
+}
+#links-list button:hover {
+  background: #b71c1c;
+}

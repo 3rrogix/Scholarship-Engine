@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scholarship Engine Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Scholarship Engine Dashboard</h1>
+    <form id="api-key-form">
+      <label for="api-key">Gemini API Key:</label>
+      <input type="password" id="api-key" placeholder="Enter your Gemini API key" autocomplete="off">
+      <button type="submit">Save API Key</button>
+      <span id="api-key-status"></span>
+    </form>
+    <hr>
+    <h2>Saved Scholarship Links</h2>
+    <ul id="links-list"></ul>
+    <form id="add-link-form">
+      <input type="url" id="new-link" placeholder="Add scholarship link" required>
+      <button type="submit">Add Link</button>
+    </form>
+    <hr>
+    <h2>Resume</h2>
+    <textarea id="resume" rows="10" placeholder="Paste your resume here..."></textarea>
+    <button id="save-resume">Save Resume</button>
+    <span id="resume-status"></span>
+  </div>
+  <script src="dashboard.js"></script>
+</body>
+</html>
