@@ -1,3 +1,27 @@
+  // Merge links by base URL (ignoring query/hash)
+  function mergeLinks(links) {
+    const seen = new Map();
+    // Status priority: open > closed > ad > not found > ''
+    const statusPriority = { 'open': 4, 'closed': 3, 'ad': 2, 'not found': 1, '': 0 };
+    links.forEach(linkObj => {
+      const obj = typeof linkObj === 'string' ? { url: linkObj } : linkObj;
+      const url = obj.url;
+      const base = url.split('?')[0].split('#')[0];
+      if (!seen.has(base)) {
+        seen.set(base, { ...obj });
+      } else {
+        // Merge status if new one is higher priority
+        const existing = seen.get(base);
+        const s1 = existing.status || '';
+        const s2 = obj.status || '';
+        if (statusPriority[s2] > statusPriority[s1]) {
+          existing.status = s2;
+        }
+        // Optionally merge 'saved' or other fields as needed
+      }
+    });
+    return Array.from(seen.values());
+  }
 // Dashboard logic for Gemini API key, links, and resume
 
 document.addEventListener('DOMContentLoaded', () => {
