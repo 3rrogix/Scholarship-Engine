@@ -8,13 +8,7 @@
       "http://*/*",
       "https://*/*"
     ],
-    "content_scripts": [
-      {
-        "matches": ["https://www.google.com/search*"],
-        "js": ["content.js"],
-        "run_at": "document_end"
-      }
-    ],
+    // No automatic content_scripts. content.js is injected only when importing links.
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
