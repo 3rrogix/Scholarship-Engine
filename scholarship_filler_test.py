@@ -163,17 +163,14 @@ def fill_application(url, user_info, client):
                 pass
             time.sleep(0.5)
 
+
     # Loop: follow apply buttons/links until a form or login is detected
     max_steps = 5
+    form_ready = False
     for step in range(max_steps):
-        # Accept cookies if present (only on first step or if banner reappears)
         if step == 0:
             accept_cookies_if_present(driver)
-
-        # Wait for the page to finish loading
         wait_for_page_load(driver)
-
-        # Check for login form (by keywords or password field)
         page_source = driver.page_source.lower()
         password_fields = driver.find_elements(By.XPATH, "//input[@type='password']")
         if (
@@ -184,33 +181,37 @@ def fill_application(url, user_info, client):
             wait_for_page_load(driver)
             time.sleep(2)
             continue
-
-        # Check for form fields (input, select, textarea)
         form_elements = driver.find_elements(By.XPATH, "//input | //select | //textarea")
-        # Only proceed if there are multiple input fields (not just a search box)
         if len(form_elements) > 2:
-            # Check if this is just a search form (e.g., only one text input with 'search' in placeholder)
             text_inputs = driver.find_elements(By.XPATH, "//input[@type='text']")
             if len(form_elements) == 1 and text_inputs:
                 placeholder = text_inputs[0].get_attribute('placeholder')
                 if placeholder and 'search' in placeholder.lower():
-                    # This is just a search box, not a real form
                     pass
                 else:
                     print("Form detected. Proceeding to fill the form.")
+                    form_ready = True
                     break
             else:
                 print("Form detected. Proceeding to fill the form.")
+                form_ready = True
                 break
-
-        # Try to find and click an apply button/link
         found = find_and_click_apply(driver)
-        if not found:
+        if found:
+            # After user confirms the form is ready, break to fill it
+            form_ready = True
+            break
+        else:
             print("No more 'Apply' buttons/links found. Stopping navigation.")
             break
         time.sleep(2)
-        # Accept cookies again in case new site/tab has a banner
         accept_cookies_if_present(driver)
+
+    if not form_ready:
+        print("No form detected or user did not confirm form is ready. Exiting.")
+        input("Press Enter to close the browser...")
+        driver.quit()
+        return
 
     # Now analyze HTML elements directly and fill the form
     # Check for login page by scanning title and visible text for login-related keywords
