@@ -348,8 +348,14 @@ def fill_application(url, user_info, client):
                     continue
 
         print("[DEBUG] Filled out the form as best as possible. Please review and submit manually.")
-        input("Press Enter to close the browser...")
-        driver.quit()
+        while True:
+            user_input = input("Should the script continue? (y/n): ").strip().lower()
+            if user_input == 'y':
+                break
+            elif user_input == 'n':
+                print("Closing the browser...")
+                driver.quit()
+                return
     except Exception as e:
         print(f"[DEBUG] Error while filling the form: {e}")
         input("Press Enter to close the browser...")
