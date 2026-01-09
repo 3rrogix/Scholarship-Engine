@@ -8,7 +8,6 @@
       "http://*/*",
       "https://*/*"
     ],
-    // No automatic content_scripts. content.js is injected only when importing links.
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

@@ -135,14 +135,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = newLinkInput.value.trim();
     if (url) {
       chrome.storage.local.get(['scholarshipLinks'], (result) => {
-        const links = result.scholarshipLinks || [];
-        if (!links.includes(url)) {
-          links.push(url);
-          chrome.storage.local.set({ scholarshipLinks: links }, () => {
-            renderLinks(links);
-            newLinkInput.value = '';
-          });
-        }
+        let links = result.scholarshipLinks || [];
+        links.push({ url });
+        links = mergeLinks(links);
+        chrome.storage.local.set({ scholarshipLinks: links }, () => {
+          renderLinks(links);
+          newLinkInput.value = '';
+        });
       });
     }
   });
@@ -211,12 +210,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       chrome.storage.local.get(['scholarshipLinks'], (result) => {
-        const existing = result.scholarshipLinks || [];
-        const newLinks = links.filter(l => !existing.includes(l));
-        const updated = existing.concat(newLinks);
-        chrome.storage.local.set({ scholarshipLinks: updated }, () => {
-          renderLinks(updated);
-          searchStatus.textContent = `Imported ${newLinks.length} new links.`;
+        let existing = result.scholarshipLinks || [];
+        // Convert all to objects for merging
+        existing = existing.map(l => typeof l === 'string' ? { url: l } : l);
+        const newObjs = links.map(l => ({ url: l }));
+        const merged = mergeLinks(existing.concat(newObjs));
+        chrome.storage.local.set({ scholarshipLinks: merged }, () => {
+          renderLinks(merged);
+          searchStatus.textContent = `Imported ${merged.length - existing.length} new links.`;
         });
       });
     }
